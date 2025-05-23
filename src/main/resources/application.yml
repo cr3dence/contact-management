@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/contacts
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  data:
+    web:
+      pageable:
+        default-page-size: 1
+        max-page-size: 100
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
