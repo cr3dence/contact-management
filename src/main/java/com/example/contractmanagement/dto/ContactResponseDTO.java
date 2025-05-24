@@ -1,32 +1,20 @@
-package com.example.contractmanagement.model;
+package com.example.contractmanagement.dto;
 
-import jakarta.persistence.*;
-
-@Entity
-@Table(name = "contacts")
-public class Contact {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class ContactResponseDTO {
     private Long id;
-
     private String firstName;
     private String lastName;
     private String email;
     private String phoneNumber;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private String createdBy; 
 
-
-    public Contact() {}
-
-    public Contact(String firstName, String lastName, String email, String phoneNumber) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.phoneNumber = phoneNumber;
+    public ContactResponseDTO(com.example.contractmanagement.model.Contact contact) {
+        this.id = contact.getId();
+        this.firstName = contact.getFirstName();
+        this.lastName = contact.getLastName();
+        this.email = contact.getEmail();
+        this.phoneNumber = contact.getPhoneNumber();
+        this.createdBy = contact.getUser().getUsername();
     }
 
     public Long getId() {
@@ -68,12 +56,12 @@ public class Contact {
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
-    
-    public User getUser() {
-        return user;
+
+    public String getCreatedBy() {
+        return createdBy;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
     }
 }

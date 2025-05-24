@@ -1,15 +1,17 @@
 package com.example.contractmanagement.controller;
 
+import com.example.contractmanagement.dto.ContactResponseDTO;
 import com.example.contractmanagement.model.Contact;
 import com.example.contractmanagement.service.ContactService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/contacts")
@@ -23,26 +25,30 @@ public class ContactController {
     }
 
     @PostMapping
-    public ResponseEntity<Contact> createContact(@RequestBody Contact contact) {
-        return ResponseEntity.ok(contactService.createContact(contact));
+    public ResponseEntity<ContactResponseDTO> createContact(@RequestBody Contact contact) {
+        Contact created = contactService.createContact(contact);
+        return ResponseEntity.ok(new ContactResponseDTO(created));
     }
 
     @GetMapping
-    public ResponseEntity<Page<Contact>> getAllContacts(Pageable pageable) {
-        return ResponseEntity.ok(contactService.getAllContacts(pageable));
+    public ResponseEntity<Page<ContactResponseDTO>> getAllContacts(Pageable pageable) {
+        Page<Contact> contacts = contactService.getAllContacts(pageable);
+        Page<ContactResponseDTO> dtoPage = contacts.map(ContactResponseDTO::new);
+        return ResponseEntity.ok(dtoPage);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Contact> getContactById(@PathVariable Long id) {
+    public ResponseEntity<ContactResponseDTO> getContactById(@PathVariable Long id) {
         return contactService.getContactById(id)
-                .map(ResponseEntity::ok)
+                .map(contact -> ResponseEntity.ok(new ContactResponseDTO(contact)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Contact> updateContact(@PathVariable Long id, @RequestBody Contact updatedContact) {
+    public ResponseEntity<ContactResponseDTO> updateContact(@PathVariable Long id, @RequestBody Contact updatedContact) {
         try {
-            return ResponseEntity.ok(contactService.updateContact(id, updatedContact));
+            Contact updated = contactService.updateContact(id, updatedContact);
+            return ResponseEntity.ok(new ContactResponseDTO(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -55,19 +61,27 @@ public class ContactController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Contact>> searchContacts(
+    public ResponseEntity<List<ContactResponseDTO>> searchContacts(
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String lastName,
             @RequestParam(required = false) String email) {
 
+        List<Contact> contacts;
+
         if (firstName != null) {
-            return ResponseEntity.ok(contactService.searchByFirstName(firstName));
+            contacts = contactService.searchByFirstName(firstName);
         } else if (lastName != null) {
-            return ResponseEntity.ok(contactService.searchByLastName(lastName));
+            contacts = contactService.searchByLastName(lastName);
         } else if (email != null) {
-            return ResponseEntity.ok(contactService.searchByEmail(email));
+            contacts = contactService.searchByEmail(email);
         } else {
             return ResponseEntity.badRequest().build();
         }
+
+        List<ContactResponseDTO> dtos = contacts.stream()
+                .map(ContactResponseDTO::new)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
     }
 }
