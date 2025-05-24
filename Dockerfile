@@ -1,14 +1,26 @@
-# Use lightweight JDK base image
-FROM eclipse-temurin:17-jdk-alpine
+# Stage 1: Build the application
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
 
-# Set the working directory
 WORKDIR /app
 
-# Copy the built jar into the container
-COPY target/contractmanagement-0.0.1-SNAPSHOT.jar contact.jar
+# Copy pom.xml and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-# Expose application port
+# Copy full source and build
+COPY src ./src
+RUN mvn clean install -DskipTests
+
+# Stage 2: Run the application
+FROM eclipse-temurin:17-jdk-alpine
+
+WORKDIR /app
+
+# Copy jar from builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+# Expose app port
 EXPOSE 8080
 
-# Start the application
-ENTRYPOINT ["java", "-jar", "contact.jar"]
+# Run app
+ENTRYPOINT ["java", "-jar", "app.jar"]
