@@ -33,7 +33,7 @@ public class SecurityConfig {
 	            .requestMatchers("/api/users/**").hasRole("ADMIN")
 	            .anyRequest().authenticated()
 	        )
-	        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class) // 👈 REQUIRED
+	        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 	        .httpBasic(Customizer.withDefaults())
 	        .build();
 	}

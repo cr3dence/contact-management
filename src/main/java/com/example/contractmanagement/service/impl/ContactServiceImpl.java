@@ -1,7 +1,10 @@
 package com.example.contractmanagement.service.impl;
 
-import java.util.List;
-import java.util.Optional;
+import com.example.contractmanagement.model.Contact;
+import com.example.contractmanagement.model.User;
+import com.example.contractmanagement.repository.ContactRepository;
+import com.example.contractmanagement.repository.UserRepository;
+import com.example.contractmanagement.service.ContactService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -10,16 +13,18 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.example.contractmanagement.model.Contact;
-import com.example.contractmanagement.model.User;
-import com.example.contractmanagement.repository.ContactRepository;
-import com.example.contractmanagement.repository.UserRepository;
-import com.example.contractmanagement.service.ContactService;
+import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class ContactServiceImpl implements ContactService {
+
     private final ContactRepository contactRepository;
     private final UserRepository userRepository;
+
+    private static final Pattern EMAIL_REGEX = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+    private static final Pattern PHONE_REGEX = Pattern.compile("^\\d{10}$");
 
     @Autowired
     public ContactServiceImpl(ContactRepository contactRepository, UserRepository userRepository) {
@@ -43,8 +48,30 @@ public class ContactServiceImpl implements ContactService {
         }
     }
 
+    private void validateContact(Contact contact) {
+        if (contact.getFirstName() == null || contact.getFirstName().trim().isEmpty()) {
+            throw new IllegalArgumentException("First name cannot be null or empty");
+        }
+
+        boolean hasEmail = contact.getEmail() != null && !contact.getEmail().trim().isEmpty();
+        boolean hasPhone = contact.getPhoneNumber() != null && !contact.getPhoneNumber().trim().isEmpty();
+
+        if (!hasEmail && !hasPhone) {
+            throw new IllegalArgumentException("At least one of email or phone number must be provided");
+        }
+
+        if (hasEmail && !EMAIL_REGEX.matcher(contact.getEmail()).matches()) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+
+        if (hasPhone && !PHONE_REGEX.matcher(contact.getPhoneNumber()).matches()) {
+            throw new IllegalArgumentException("Phone number must be exactly 10 digits");
+        }
+    }
+
     @Override
     public Contact createContact(Contact contact) {
+        validateContact(contact);
         contact.setUser(getCurrentUser());
         return contactRepository.save(contact);
     }
@@ -52,11 +79,9 @@ public class ContactServiceImpl implements ContactService {
     @Override
     public Page<Contact> getAllContacts(Pageable pageable) {
         User user = getCurrentUser();
-        Page<Contact> contacts = isAdmin(user)
+        return isAdmin(user)
                 ? contactRepository.findAll(pageable)
                 : contactRepository.findByUser(user, pageable);
-
-        return contacts;
     }
 
     @Override
@@ -70,6 +95,8 @@ public class ContactServiceImpl implements ContactService {
 
     @Override
     public Contact updateContact(Long id, Contact updatedContact) {
+        validateContact(updatedContact);
+
         Contact contact = contactRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Contact not found with ID: " + id));
         User user = getCurrentUser();
@@ -110,9 +137,32 @@ public class ContactServiceImpl implements ContactService {
 
     @Override
     public List<Contact> searchByEmail(String email) {
+        if (!EMAIL_REGEX.matcher(email).matches()) {
+            throw new IllegalArgumentException("Invalid email format for search");
+        }
+
         User user = getCurrentUser();
         return isAdmin(user)
                 ? contactRepository.findByEmailContainingIgnoreCase(email)
                 : contactRepository.findByEmailContainingIgnoreCaseAndUserId(email, user.getId());
     }
+
+    @Override
+    public Page<Contact> searchByFields(String firstName, String lastName, String email, Pageable pageable) {
+        if (firstName == null && lastName == null && email == null) {
+            throw new IllegalArgumentException("At least one search parameter must be provided.");
+        }
+
+        if (email != null && !EMAIL_REGEX.matcher(email).matches()) {
+            throw new IllegalArgumentException("Invalid email format for search.");
+        }
+
+        User user = getCurrentUser();
+        if (isAdmin(user)) {
+            return contactRepository.searchByFieldsForAdmin(firstName, lastName, email, pageable);
+        } else {
+            return contactRepository.searchByFieldsForUser(firstName, lastName, email, user.getId(), pageable);
+        }
+    }
+
 }

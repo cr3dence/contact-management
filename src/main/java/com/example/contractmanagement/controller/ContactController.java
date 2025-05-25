@@ -1,17 +1,22 @@
 package com.example.contractmanagement.controller;
 
-import com.example.contractmanagement.dto.ContactResponseDTO;
-import com.example.contractmanagement.model.Contact;
-import com.example.contractmanagement.service.ContactService;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.example.contractmanagement.dto.ContactResponseDTO;
+import com.example.contractmanagement.model.Contact;
+import com.example.contractmanagement.service.ContactService;
 
 @RestController
 @RequestMapping("/api/contacts")
@@ -46,12 +51,8 @@ public class ContactController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ContactResponseDTO> updateContact(@PathVariable Long id, @RequestBody Contact updatedContact) {
-        try {
-            Contact updated = contactService.updateContact(id, updatedContact);
-            return ResponseEntity.ok(new ContactResponseDTO(updated));
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        Contact updated = contactService.updateContact(id, updatedContact);
+        return ResponseEntity.ok(new ContactResponseDTO(updated));
     }
 
     @DeleteMapping("/{id}")
@@ -61,27 +62,15 @@ public class ContactController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<ContactResponseDTO>> searchContacts(
+    public ResponseEntity<Page<ContactResponseDTO>> searchContacts(
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String lastName,
-            @RequestParam(required = false) String email) {
+            @RequestParam(required = false) String email,
+            Pageable pageable) {
 
-        List<Contact> contacts;
+        Page<Contact> contacts = contactService.searchByFields(firstName, lastName, email, pageable);
+        Page<ContactResponseDTO> dtoPage = contacts.map(ContactResponseDTO::new);
 
-        if (firstName != null) {
-            contacts = contactService.searchByFirstName(firstName);
-        } else if (lastName != null) {
-            contacts = contactService.searchByLastName(lastName);
-        } else if (email != null) {
-            contacts = contactService.searchByEmail(email);
-        } else {
-            return ResponseEntity.badRequest().build();
-        }
-
-        List<ContactResponseDTO> dtos = contacts.stream()
-                .map(ContactResponseDTO::new)
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(dtoPage);
     }
 }

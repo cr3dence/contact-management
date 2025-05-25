@@ -9,17 +9,21 @@ import java.util.Optional;
 
 public interface ContactService {
 
-    Contact createContact(Contact contact);
+	Contact createContact(Contact contact);
 
-    Page<Contact> getAllContacts(Pageable pageable);
+	Page<Contact> getAllContacts(Pageable pageable);
 
-    Optional<Contact> getContactById(Long id);
+	Optional<Contact> getContactById(Long id);
 
-    Contact updateContact(Long id, Contact contact);
+	Contact updateContact(Long id, Contact contact);
 
-    void deleteContact(Long id);
+	void deleteContact(Long id);
 
-    List<Contact> searchByFirstName(String firstName);
-    List<Contact> searchByLastName(String lastName);
-    List<Contact> searchByEmail(String email);
+	Page<Contact> searchByFields(String firstName, String lastName, String email, Pageable pageable);
+
+	List<Contact> searchByFirstName(String firstName);
+
+	List<Contact> searchByLastName(String lastName);
+
+	List<Contact> searchByEmail(String email);
 }
